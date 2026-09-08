@@ -161,7 +161,9 @@ package() {
     "share/DaVinciResolve.desktop" \
     "share/DaVinciControlPanelsSetup.desktop" \
     "share/blackmagicraw-player.desktop" \
-    "share/blackmagicraw-speedtest.desktop"
+    "share/blackmagicraw-speedtest.desktop" \
+    "share/DaVinciResolveCaptureLogs.desktop" \
+    "share/DaVinciRemoteMonitoring.desktop"
   install -D -m 0644 -t "${pkgdir}/usr/share/desktop-directories" \
     "share/DaVinciResolve.directory"
   install -D -m 0644 -t "${pkgdir}/etc/xdg/menus" \
