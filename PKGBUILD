@@ -25,9 +25,13 @@ depends=('glu' 'fuse2' 'opencl-driver' 'qt5-x11extras' 'qt5-svg'
 makedepends=('libarchive' 'xdg-user-dirs' 'patchelf')
 conflicts=('davinci-resolve' 'davinci-resolve-beta' 'davinci-resolve-studio-beta')
 source=("file://DaVinci_Resolve_Studio_${pkgver}_Linux.zip"
-        "davinci-control-panels-setup.sh")
+        "davinci-control-panels-setup.sh"
+        "davinci-resolve.sysusers.conf"
+        "davinci-resolve.tmpfiles.conf")
 sha256sums=('9fbbc5d919072d5d133e945d60e315b3d2acf3796732e3dac9dd3babb8b063cb'
-            'f17236fd68cead727c647bc31404e402922cdd491df5526f4b62364cbef9d3b8')
+            'f17236fd68cead727c647bc31404e402922cdd491df5526f4b62364cbef9d3b8'
+            '6adeb6949cb3c2dc80252eed5dbf79510edfb35e431883da325eb04d59ad5ed5'
+            'aae2fb0b67a04fd2a2414bab5fa7b6b68fb1e6798e17fed547ca04c6627d3f8d')
 install="${pkgname}.install"
 options=('!strip')
 
@@ -128,8 +132,27 @@ package() {
     share/{default-config.dat,log-conf.xml}
   install -D -m 0644 -t "${pkgdir}/opt/${_pkgname}/DolbyVision" \
     "share/default_cm_config.bin"
-  install -d -m 0755 "${pkgdir}/opt/${_pkgname}/.license"
-  install -d -m 0755 "${pkgdir}/opt/${_pkgname}/Apple Immersive/Calibration"
+
+  # Once activated, the .license directory should not be touched, or the activation becomes invalidated.
+  # These directories need to be writable by users, so tmpfiles changes the group to "davinci"
+  install -d -m 2775 "${pkgdir}/opt/${_pkgname}/.license"
+  install -d -m 2775 "${pkgdir}/opt/${_pkgname}/Extras"
+  install -d -m 2775 "${pkgdir}/opt/${_pkgname}/easyDCP"
+  install -d -m 2775 "${pkgdir}/opt/${_pkgname}/LUT"
+  install -d -m 2775 "${pkgdir}/opt/${_pkgname}/Apple Immersive"
+  install -d -m 0755 "${pkgdir}/var/BlackmagicDesign"
+  install -d -m 2775 "${pkgdir}/var/BlackmagicDesign/DaVinci Resolve"
+
+  install -D -m 0644 "${srcdir}/davinci-resolve.sysusers.conf" \
+    "${pkgdir}/usr/lib/sysusers.d/${pkgname}.conf"
+  install -D -m 0644 "${srcdir}/davinci-resolve.tmpfiles.conf" \
+    "${pkgdir}/usr/lib/tmpfiles.d/${pkgname}.conf"
+
+  install -d -m 0755 "${pkgdir}/usr/OFX/Plugins"
+  rm -rf "${pkgdir}/usr/OFX/Plugins/DaVinci Resolve Renderer.ofx.bundle"
+  mv "share/DaVinci Resolve Renderer.ofx.bundle" \
+    "${pkgdir}/usr/OFX/Plugins/DaVinci Resolve Renderer.ofx.bundle"
+
   # Install licenses
   install -d -m 0644 "${pkgdir}/usr/share/licenses/${pkgname}"
   ln -sf "/opt/resolve/docs/License.html" "${pkgdir}/usr/share/licenses/${pkgname}"
@@ -155,9 +178,31 @@ package() {
     "${pkgdir}/usr/share/icons/hicolor/256x256/apps/blackmagicraw-player.png"
   install -D -m 0644 "graphics/blackmagicraw-speedtest_256x256_apps.png" \
     "${pkgdir}/usr/share/icons/hicolor/256x256/apps/blackmagicraw-speedtest.png"
+  install -D -m 0644 "graphics/DV_ServerAccess.png" \
+    "${pkgdir}/usr/share/icons/hicolor/64x64/apps/DV_ServerAccess.png"
+  # Install mimetype context icons
+  install -D -m 0644 "graphics/DV_ResolveBin.png" \
+    "${pkgdir}/usr/share/icons/hicolor/64x64/mimetypes/application-x-resolvebin.png"
+  install -D -m 0644 "graphics/DV_ResolveProj.png" \
+    "${pkgdir}/usr/share/icons/hicolor/64x64/mimetypes/application-x-resolveproj.png"
+  install -D -m 0644 "graphics/DV_ResolveTimeline.png" \
+    "${pkgdir}/usr/share/icons/hicolor/64x64/mimetypes/application-x-resolvetimeline.png"
+  install -D -m 0644 "graphics/DV_ServerAccess.png" \
+    "${pkgdir}/usr/share/icons/hicolor/64x64/mimetypes/application-x-resolvedbkey.png"
+  install -D -m 0644 "graphics/DV_TemplateBundle.png" \
+    "${pkgdir}/usr/share/icons/hicolor/64x64/mimetypes/application-x-resolvetemplatebundle.png"
+  install -D -m 0644 "graphics/application-x-braw-clip_48x48_mimetypes.png" \
+    "${pkgdir}/usr/share/icons/hicolor/48x48/mimetypes/application-x-braw-clip.png"
+  install -D -m 0644 "graphics/application-x-braw-clip_256x256_mimetypes.png" \
+    "${pkgdir}/usr/share/icons/hicolor/256x256/mimetypes/application-x-braw-clip.png"
+  install -D -m 0644 "graphics/application-x-braw-sidecar_48x48_mimetypes.png" \
+    "${pkgdir}/usr/share/icons/hicolor/48x48/mimetypes/application-x-braw-sidecar.png"
+  install -D -m 0644 "graphics/application-x-braw-sidecar_256x256_mimetypes.png" \
+    "${pkgdir}/usr/share/icons/hicolor/256x256/mimetypes/application-x-braw-sidecar.png"
   # Install other files
   install -D -m 0644 -t "${pkgdir}/usr/share/mime/packages" \
-    "share/resolve.xml"
+    "share/resolve.xml" \
+    "share/blackmagicraw.xml"
   install -D -m 0644 -t "${pkgdir}/usr/lib/udev/rules.d" \
     "share/etc/udev/rules.d"/{99-BlackmagicDevices.rules,99-ResolveKeyboardHID.rules,99-DavinciPanel.rules}
   popd

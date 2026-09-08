@@ -1,10 +1,38 @@
-post_install()
-{
-  if [[ -f /usr/bin/xdg-desktop-menu ]]; then
-    xdg-desktop-menu install --novendor /usr/share/desktop-directories/DaVinciResolve.directory /usr/share/applications/DaVinciResolve.desktop
-    xdg-desktop-menu install --novendor /usr/share/desktop-directories/DaVinciResolve.directory /usr/share/applications/blackmagicraw-player.desktop
-    xdg-desktop-menu install --novendor /usr/share/desktop-directories/DaVinciResolve.directory /usr/share/applications/blackmagicraw-speedtest.desktop
-    xdg-desktop-menu install --novendor /usr/share/desktop-directories/DaVinciResolve.directory /usr/share/applications/DaVinciControlPanelsSetup.desktop
-    xdg-desktop-menu forceupdate
-  fi
+_davinci_group_notice() {
+  # Shown when nobody is in the 'davinci' group yet.
+  # The sysusers.d hook that creates the group runs after this scriptlet on a fresh install,
+  # so a missing group is treated the same as an empty one.
+
+  local _members
+  _members="$(getent group davinci 2>/dev/null | cut -d: -f4)"
+  [[ -n "${_members}" ]] && return 0
+  cat <<'EOF'
+
+==> Add your user to the 'davinci' group to activate Resolve and install extras:
+
+        sudo gpasswd -a "$USER" davinci
+
+    Log out and back in for the new group membership to take effect.
+
+EOF
+}
+
+_davinci_desktop_menu() {
+  [[ -f /usr/bin/xdg-desktop-menu ]] || return 0
+
+  xdg-desktop-menu install --novendor /usr/share/desktop-directories/DaVinciResolve.directory /usr/share/applications/DaVinciResolve.desktop
+  xdg-desktop-menu install --novendor /usr/share/desktop-directories/DaVinciResolve.directory /usr/share/applications/blackmagicraw-player.desktop
+  xdg-desktop-menu install --novendor /usr/share/desktop-directories/DaVinciResolve.directory /usr/share/applications/blackmagicraw-speedtest.desktop
+  xdg-desktop-menu install --novendor /usr/share/desktop-directories/DaVinciResolve.directory /usr/share/applications/DaVinciControlPanelsSetup.desktop
+  xdg-desktop-menu forceupdate
+}
+
+post_install() {
+  _davinci_desktop_menu
+  _davinci_group_notice
+}
+
+post_upgrade() {
+  _davinci_desktop_menu
+  _davinci_group_notice
 }
