@@ -90,8 +90,8 @@ prepare() {
      squashfs-root/libs/libgobject-2.0.so.0{,.6800.4} \
      squashfs-root/libs/libc++.so.1{,.0} \
      squashfs-root/libs/libc++abi.so.1{,.0}
-  ln -s "../BlackmagicRAWPlayer/BlackmagicRawAPI" "squashfs-root/bin/"
-  ln -s -t squashfs-root/libs/ \
+  ln -sfn "../BlackmagicRAWPlayer/BlackmagicRawAPI" "squashfs-root/bin/"
+  ln -sf -t squashfs-root/libs/ \
     /usr/lib/lib{glib,gio,gmodule,gobject}-2.0.so.0 \
     /usr/lib/libgdk_pixbuf-2.0.so.0 \
     /usr/lib/lib{c++,c++abi}.so.1
@@ -132,7 +132,7 @@ package() {
   install -d -m 0755 "${pkgdir}/opt/${_pkgname}/Apple Immersive/Calibration"
   # Install licenses
   install -d -m 0644 "${pkgdir}/usr/share/licenses/${pkgname}"
-  ln -s "/opt/resolve/docs/License.html" "${pkgdir}/usr/share/licenses/${pkgname}"
+  ln -sf "/opt/resolve/docs/License.html" "${pkgdir}/usr/share/licenses/${pkgname}"
   # Install Desktop files and menu
   install -D -m 0644 -t "${pkgdir}/usr/share/applications" \
     "share/DaVinciResolve.desktop" \
