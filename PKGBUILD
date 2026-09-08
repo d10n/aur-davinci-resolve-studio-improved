@@ -12,7 +12,7 @@
 
 _pkgname=resolve
 pkgname=davinci-resolve-studio
-pkgver=21.0.4
+pkgver=21.1
 pkgrel=1
 pkgdesc='Professional A/V post-production software suite from Blackmagic Design. Studio edition, requires license key or license dongle.'
 arch=('x86_64')
@@ -28,10 +28,10 @@ source=("file://DaVinci_Resolve_Studio_${pkgver}_Linux.zip"
         "davinci-control-panels-setup.sh"
         "davinci-resolve.sysusers.conf"
         "davinci-resolve.tmpfiles.conf")
-sha256sums=('9fbbc5d919072d5d133e945d60e315b3d2acf3796732e3dac9dd3babb8b063cb'
+sha256sums=('7968105cb1cc855892eaea20033fc457a26a37e6492b5d7be0815c975cdc5350'
             'f17236fd68cead727c647bc31404e402922cdd491df5526f4b62364cbef9d3b8'
             '6adeb6949cb3c2dc80252eed5dbf79510edfb35e431883da325eb04d59ad5ed5'
-            'aae2fb0b67a04fd2a2414bab5fa7b6b68fb1e6798e17fed547ca04c6627d3f8d')
+            'b84f893af87118c8d61cd10e66ce438d2d0fa7d620e8c4fcd26f83b7065a49e6')
 install="${pkgname}.install"
 options=('!strip')
 
@@ -49,7 +49,7 @@ prepare() {
   mv lib/* "${srcdir}/squashfs-root/libs"
   popd
 
-  rm -rf squashfs-root/{installer*,AppRun*,CentOSUpdate}
+  rm -rf squashfs-root/{installer*,AppRun*,CentOSUpdate,.ddm}
 
   while IFS= read -r -d '' _file; do
     chmod 0755 "${_file}"
@@ -88,10 +88,10 @@ prepare() {
     sed -i "s|RESOLVE_INSTALL_LOCATION|/opt/${_pkgname}|g" "${_file}"
   done < <(find . -type f '(' -name "*.desktop" -o -name "*.directory" -o -name "*.directory" -o -name "*.menu" ')' -print0)
 
-  rm squashfs-root/libs/libglib-2.0.so.0{,.6800.4} \
-     squashfs-root/libs/libgio-2.0.so.0{,.6800.4} \
-     squashfs-root/libs/libgmodule-2.0.so.0{,.6800.4} \
-     squashfs-root/libs/libgobject-2.0.so.0{,.6800.4} \
+  rm squashfs-root/libs/libglib-2.0.so.0{,.8200.4} \
+     squashfs-root/libs/libgio-2.0.so.0{,.8200.4} \
+     squashfs-root/libs/libgmodule-2.0.so.0{,.8200.4} \
+     squashfs-root/libs/libgobject-2.0.so.0{,.8200.4} \
      squashfs-root/libs/libc++.so.1{,.0} \
      squashfs-root/libs/libc++abi.so.1{,.0}
   ln -sfn "../BlackmagicRAWPlayer/BlackmagicRawAPI" "squashfs-root/bin/"
@@ -140,6 +140,9 @@ package() {
   install -d -m 2775 "${pkgdir}/opt/${_pkgname}/easyDCP"
   install -d -m 2775 "${pkgdir}/opt/${_pkgname}/LUT"
   install -d -m 2775 "${pkgdir}/opt/${_pkgname}/Apple Immersive"
+  install -d -m 2775 "${pkgdir}/opt/${_pkgname}/Immersive"
+  install -d -m 2775 "${pkgdir}/opt/${_pkgname}/Fairlight"
+  install -d -m 2775 "${pkgdir}/opt/${_pkgname}/logs"
   install -d -m 0755 "${pkgdir}/var/BlackmagicDesign"
   install -d -m 2775 "${pkgdir}/var/BlackmagicDesign/DaVinci Resolve"
 
