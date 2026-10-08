@@ -1,0 +1,8 @@
+# /usr/lib/udev/rules.d/70-davinci-resolve-studio-hidraw.rules
+#
+# Resolve talks to Blackmagic panels (e.g. the Replay Editor, 1edb:da11) through /dev/hidraw*, which defaults to root-only.
+# Blackmagic's own installer in scripts/post_install.sh makes every hidraw device on the system 0777; this is scoped to vendor 1edb instead.
+# uaccess grants access to the user logged in at the local seat; the 'davinci' group grants access everywhere else (SSH, headless).
+# uaccess only takes effect before 73-seat-late.rules, so this file must sort before it.
+
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1edb", GROUP="davinci", MODE="0660", TAG+="uaccess"

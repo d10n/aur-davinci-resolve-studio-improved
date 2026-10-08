@@ -27,11 +27,13 @@ conflicts=('davinci-resolve' 'davinci-resolve-beta' 'davinci-resolve-studio-beta
 source=("file://DaVinci_Resolve_Studio_${pkgver}_Linux.zip"
         "davinci-control-panels-setup.sh"
         "davinci-resolve.sysusers.conf"
-        "davinci-resolve.tmpfiles.conf")
+        "davinci-resolve.tmpfiles.conf"
+        "davinci-resolve.udev.rules")
 sha256sums=('7968105cb1cc855892eaea20033fc457a26a37e6492b5d7be0815c975cdc5350'
             'f17236fd68cead727c647bc31404e402922cdd491df5526f4b62364cbef9d3b8'
             '6adeb6949cb3c2dc80252eed5dbf79510edfb35e431883da325eb04d59ad5ed5'
-            'b84f893af87118c8d61cd10e66ce438d2d0fa7d620e8c4fcd26f83b7065a49e6')
+            'b84f893af87118c8d61cd10e66ce438d2d0fa7d620e8c4fcd26f83b7065a49e6'
+            '85a848ee5437c46da44a5c0a9395b4d2d845c6562214e85566649b65e80e06cc')
 install="${pkgname}.install"
 options=('!strip')
 
@@ -150,6 +152,13 @@ package() {
     "${pkgdir}/usr/lib/sysusers.d/${pkgname}.conf"
   install -D -m 0644 "${srcdir}/davinci-resolve.tmpfiles.conf" \
     "${pkgdir}/usr/lib/tmpfiles.d/${pkgname}.conf"
+  install -D -m 0644 "${srcdir}/davinci-resolve.udev.rules" \
+    "${pkgdir}/usr/lib/udev/rules.d/70-${pkgname}-hidraw.rules"
+
+  # resolve, DaVinciPanelDaemon and the Fairlight page dlopen the panel APIs from hardcoded /usr/lib64 paths
+  install -d -m 0755 "${pkgdir}/usr/lib"
+  ln -s "/opt/${_pkgname}/libs/libDaVinciPanelAPI.so" "${pkgdir}/usr/lib/libDaVinciPanelAPI.so"
+  ln -s "/opt/${_pkgname}/libs/libFairlightPanelAPI.so" "${pkgdir}/usr/lib/libFairlightPanelAPI.so"
 
   install -d -m 0755 "${pkgdir}/usr/OFX/Plugins"
   rm -rf "${pkgdir}/usr/OFX/Plugins/DaVinci Resolve Renderer.ofx.bundle"
