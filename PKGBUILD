@@ -12,7 +12,7 @@
 
 _pkgname=resolve
 pkgname=davinci-resolve-studio
-pkgver=21.1
+pkgver=21.1.1
 pkgrel=1
 pkgdesc='Professional A/V post-production software suite from Blackmagic Design. Studio edition, requires license key or license dongle.'
 arch=('x86_64')
@@ -29,7 +29,7 @@ source=("file://DaVinci_Resolve_Studio_${pkgver}_Linux.zip"
         "davinci-resolve.sysusers.conf"
         "davinci-resolve.tmpfiles.conf"
         "davinci-resolve.udev.rules")
-sha256sums=('7968105cb1cc855892eaea20033fc457a26a37e6492b5d7be0815c975cdc5350'
+sha256sums=('d4f87af1a28a283bba7d824684402b7447f922e5b8f68d56d131732ea12790a5'
             'f17236fd68cead727c647bc31404e402922cdd491df5526f4b62364cbef9d3b8'
             '6adeb6949cb3c2dc80252eed5dbf79510edfb35e431883da325eb04d59ad5ed5'
             'b84f893af87118c8d61cd10e66ce438d2d0fa7d620e8c4fcd26f83b7065a49e6'
