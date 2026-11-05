@@ -12,7 +12,7 @@
 
 _pkgname=resolve
 pkgname=davinci-resolve-studio
-pkgver=21.1.1
+pkgver=21.2
 pkgrel=1
 pkgdesc='Professional A/V post-production software suite from Blackmagic Design. Studio edition, requires license key or license dongle.'
 arch=('x86_64')
@@ -29,7 +29,7 @@ source=("file://DaVinci_Resolve_Studio_${pkgver}_Linux.zip"
         "davinci-resolve.sysusers.conf"
         "davinci-resolve.tmpfiles.conf"
         "davinci-resolve.udev.rules")
-sha256sums=('d4f87af1a28a283bba7d824684402b7447f922e5b8f68d56d131732ea12790a5'
+sha256sums=('e3eb29c71ae7e83003ba6c400ddfcd0d0f4cc2b3e25b5e18adcbe6d863b66805'
             'f17236fd68cead727c647bc31404e402922cdd491df5526f4b62364cbef9d3b8'
             '6adeb6949cb3c2dc80252eed5dbf79510edfb35e431883da325eb04d59ad5ed5'
             'b84f893af87118c8d61cd10e66ce438d2d0fa7d620e8c4fcd26f83b7065a49e6'
@@ -81,10 +81,12 @@ prepare() {
   do
     _patchelf_paths[${_index}]="/opt/${_pkgname}/${_patchelf_paths[${_index}]}"
   done
+  # Chromium's sandbox only needs system libc/pthread, and patchelf cannot
+  # rewrite its non-contiguous note sections. Keep its original RPATH.
   while IFS= read -r -d '' _file; do
     [[ -f "${_file}" && $(od -t x1 -N 4 "${_file}") == *"7f 45 4c 46"* ]] || continue
     patchelf --set-rpath "$(IFS=":"; echo "${_patchelf_paths[*]}:\$ORIGIN")" "${_file}"
-  done < <(find "squashfs-root" -type f -size -32M -print0)
+  done < <(find "squashfs-root" -type f -size -32M ! -name chrome-sandbox -print0)
 
   while IFS= read -r -d '' _file; do
     sed -i "s|RESOLVE_INSTALL_LOCATION|/opt/${_pkgname}|g" "${_file}"
