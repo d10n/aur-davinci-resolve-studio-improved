@@ -29,7 +29,7 @@ source=("file://DaVinci_Resolve_Studio_${pkgver}_Linux.zip"
         "davinci-resolve.sysusers.conf"
         "davinci-resolve.tmpfiles.conf"
         "davinci-resolve.udev.rules")
-sha256sums=('e3eb29c71ae7e83003ba6c400ddfcd0d0f4cc2b3e25b5e18adcbe6d863b66805'
+sha256sums=('6f90643d81c9db57f248d910ce1ec55247779f3e07123e719bafd84dec6c4a2d'
             'f17236fd68cead727c647bc31404e402922cdd491df5526f4b62364cbef9d3b8'
             '6adeb6949cb3c2dc80252eed5dbf79510edfb35e431883da325eb04d59ad5ed5'
             'b84f893af87118c8d61cd10e66ce438d2d0fa7d620e8c4fcd26f83b7065a49e6'
