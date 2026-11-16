@@ -13,7 +13,7 @@
 _pkgname=resolve
 pkgname=davinci-resolve-studio
 pkgver=21.2
-pkgrel=1
+pkgrel=2
 pkgdesc='Professional A/V post-production software suite from Blackmagic Design. Studio edition, requires license key or license dongle.'
 arch=('x86_64')
 url="https://www.blackmagicdesign.com/support/family/davinci-resolve-and-fusion"
@@ -83,9 +83,23 @@ prepare() {
   done
   # Chromium's sandbox only needs system libc/pthread, and patchelf cannot
   # rewrite its non-contiguous note sections. Keep its original RPATH.
+  _rpath="$(IFS=":"; echo "${_patchelf_paths[*]}:\$ORIGIN")"
   while IFS= read -r -d '' _file; do
     [[ -f "${_file}" && $(od -t x1 -N 4 "${_file}") == *"7f 45 4c 46"* ]] || continue
-    patchelf --set-rpath "$(IFS=":"; echo "${_patchelf_paths[*]}:\$ORIGIN")" "${_file}"
+
+    # The BRAW apps ship their own Qt 5.9. Resolve's Qt in libs/ lacks
+    # private symbols their xcbglintegrations need, which disables OpenGL
+    # ("neither GLX nor EGL are enabled"). Search their own lib/ first.
+    case "${_file}" in
+      squashfs-root/BlackmagicRAW*/*)
+        _app="${_file#squashfs-root/}"
+        _app="${_app%%/*}"
+        patchelf --set-rpath "/opt/${_pkgname}/${_app}/lib:${_rpath}" "${_file}"
+        continue
+        ;;
+    esac
+
+    patchelf --set-rpath "${_rpath}" "${_file}"
   done < <(find "squashfs-root" -type f -size -32M ! -name chrome-sandbox -print0)
 
   while IFS= read -r -d '' _file; do
