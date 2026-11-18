@@ -13,7 +13,7 @@
 _pkgname=resolve
 pkgname=davinci-resolve-studio
 pkgver=21.2
-pkgrel=2
+pkgrel=3
 pkgdesc='Professional A/V post-production software suite from Blackmagic Design. Studio edition, requires license key or license dongle.'
 arch=('x86_64')
 url="https://www.blackmagicdesign.com/support/family/davinci-resolve-and-fusion"
@@ -30,14 +30,19 @@ source=("file://DaVinci_Resolve_Studio_${pkgver}_Linux.zip"
         "davinci-resolve.tmpfiles.conf"
         "davinci-resolve.udev.rules")
 sha256sums=('6f90643d81c9db57f248d910ce1ec55247779f3e07123e719bafd84dec6c4a2d'
-            'f17236fd68cead727c647bc31404e402922cdd491df5526f4b62364cbef9d3b8'
+            'c8682e990bc1e51454798baecc662166117c5336aef7570b7f96e62a632e9ff0'
             '6adeb6949cb3c2dc80252eed5dbf79510edfb35e431883da325eb04d59ad5ed5'
             'b84f893af87118c8d61cd10e66ce438d2d0fa7d620e8c4fcd26f83b7065a49e6'
             '85a848ee5437c46da44a5c0a9395b4d2d845c6562214e85566649b65e80e06cc')
 install="${pkgname}.install"
 options=('!strip')
 
+# Linked into /usr/lib by package(): resolve, DaVinciPanelDaemon and the
+# Fairlight page dlopen the panel APIs from hardcoded /usr/lib64 paths
+_panel_apis=('libDaVinciPanelAPI.so' 'libFairlightPanelAPI.so')
+
 prepare() {
+  rm -rf squashfs-root  # Don't package old files from previous version builds
   chmod u+x "./DaVinci_Resolve_Studio_${pkgver}_Linux.run"
   "./DaVinci_Resolve_Studio_${pkgver}_Linux.run" --appimage-extract
 
@@ -62,49 +67,62 @@ prepare() {
     chmod 0755 "${_file}"
   done < <(find "squashfs-root" -type f -print0)
 
-  # Prepare list of paths for patchelf
-  _patchelf_paths=(
-    "libs"
-    "libs/plugins/"{sqldrivers,xcbglintegrations,imageformats,platforms}
-    "libs/Fusion"
-    "plugins"
-    "bin"
-    "BlackmagicRAWSpeedTest/BlackmagicRawAPI"
-    "BlackmagicRAWSpeedTest/plugins/"{platforms,imageformats,mediaservice,audio,xcbglintegrations,bearer}
-    "BlackmagicRAWPlayer/BlackmagicRawAPI"
-    "BlackmagicRAWPlayer/plugins/"{mediaservice,imageformats,audio,platforms,xcbglintegrations,bearer}
-    "Onboarding/plugins/"{xcbglintegrations,qtwebengine,platforms,imageformats}
-    "DaVinci Control Panels Setup/plugins/"{platforms,imageformats,bearer}
-    "DaVinci Control Panels Setup/AdminUtility/PlugIns/"{DaVinciKeyboards,DaVinciPanels}
-  )
-  for _index in "${!_patchelf_paths[@]}"
-  do
-    _patchelf_paths[${_index}]="/opt/${_pkgname}/${_patchelf_paths[${_index}]}"
-  done
+  # The vendor's RPATHs work as shipped: their $ORIGIN entries, plus the
+  # DT_RPATH that libraries inherit from the program that loads them, find
+  # everything. Only drop entries that point outside the installed tree:
+  # build-host paths such as /var/lib/jenkins/..., which whoever owns them
+  # could fill with libraries, and the cwd-relative "." and "./". That only
+  # shortens an RPATH, so patchelf edits it in place.
+  _rpath_re='\((RPATH|RUNPATH)\)[^[]*\[([^]]*)\]'
   # Chromium's sandbox only needs system libc/pthread, and patchelf cannot
   # rewrite its non-contiguous note sections. Keep its original RPATH.
-  _rpath="$(IFS=":"; echo "${_patchelf_paths[*]}:\$ORIGIN")"
   while IFS= read -r -d '' _file; do
     [[ -f "${_file}" && $(od -t x1 -N 4 "${_file}") == *"7f 45 4c 46"* ]] || continue
+    # readelf only reads the headers; patchelf --print-rpath loads the whole
+    # file, up to 1.4 GB. Assign first: errexit ignores a failure in a
+    # condition.
+    _dynamic="$(LC_ALL=C readelf -d "${_file}")"
+    [[ "${_dynamic}" =~ ${_rpath_re} ]] || continue
+    _tag="${BASH_REMATCH[1]}"
+    _old_rpath="${BASH_REMATCH[2]}"
+    # glibc ignores DT_RPATH when DT_RUNPATH is present; the match above
+    # assumes a file has at most one of them
+    if [[ "${_dynamic}" == *'(RPATH)'* && "${_dynamic}" == *'(RUNPATH)'* ]]; then
+      error "%s has both DT_RPATH and DT_RUNPATH" "${_file#squashfs-root/}"
+      return 1
+    fi
 
-    # The BRAW apps ship their own Qt 5.9. Resolve's Qt in libs/ lacks
-    # private symbols their xcbglintegrations need, which disables OpenGL
-    # ("neither GLX nor EGL are enabled"). Search their own lib/ first.
-    case "${_file}" in
-      squashfs-root/BlackmagicRAW*/*)
-        _app="${_file#squashfs-root/}"
-        _app="${_app%%/*}"
-        patchelf --set-rpath "/opt/${_pkgname}/${_app}/lib:${_rpath}" "${_file}"
-        continue
-        ;;
-    esac
-
-    patchelf --set-rpath "${_rpath}" "${_file}"
-  done < <(find "squashfs-root" -type f -size -32M ! -name chrome-sandbox -print0)
+    _new_rpath=""
+    IFS=":" read -r -a _entries <<< "${_old_rpath}"
+    for _entry in "${_entries[@]}"; do
+      # Also keep the vendor's /xxx… padding: one 2006-byte name that no file
+      # system allows, so it can never match, and dropping it would rewrite
+      # bin/resolve for nothing
+      if [[ "${_entry}" == '$ORIGIN'* || "${_entry}" == '${ORIGIN}'* ||
+            "/${_entry}/" =~ /[^/]{256,}/ ]]; then
+        _new_rpath+="${_new_rpath:+:}${_entry}"
+      fi
+    done
+    if [[ "${_new_rpath}" == "${_old_rpath}" ]]; then
+      continue
+    elif [[ -z "${_new_rpath}" ]]; then
+      patchelf --remove-rpath "${_file}"
+    elif [[ "${_tag}" == RPATH ]]; then
+      # Keep DT_RPATH: unlike DT_RUNPATH, the libraries a file loads inherit it
+      patchelf --force-rpath --set-rpath "${_new_rpath}" "${_file}"
+    else
+      patchelf --set-rpath "${_new_rpath}" "${_file}"
+    fi
+  done < <(find "squashfs-root" -type f ! -name chrome-sandbox ! -name '*.dbg' -print0)
+  # The panel APIs are loaded through the /usr/lib links from package(), where
+  # $ORIGIN can't reach the panel framework's libraries next to them in libs/
+  for _lib in "${_panel_apis[@]}"; do
+    patchelf --set-rpath "/opt/${_pkgname}/libs" "squashfs-root/libs/${_lib}"
+  done
 
   while IFS= read -r -d '' _file; do
     sed -i "s|RESOLVE_INSTALL_LOCATION|/opt/${_pkgname}|g" "${_file}"
-  done < <(find . -type f '(' -name "*.desktop" -o -name "*.directory" -o -name "*.directory" -o -name "*.menu" ')' -print0)
+  done < <(find . -type f '(' -name "*.desktop" -o -name "*.directory" -o -name "*.menu" ')' -print0)
 
   rm squashfs-root/libs/libglib-2.0.so.0{,.8200.4} \
      squashfs-root/libs/libgio-2.0.so.0{,.8200.4} \
@@ -113,18 +131,20 @@ prepare() {
      squashfs-root/libs/libc++.so.1{,.0} \
      squashfs-root/libs/libc++abi.so.1{,.0}
   ln -sfn "../BlackmagicRAWPlayer/BlackmagicRawAPI" "squashfs-root/bin/"
+  # The Onboarding QML plugins look for Qt in Onboarding/lib, as laid out by
+  # the vendor's Qt build. Resolve's Qt is in libs/.
+  ln -sfn ../libs squashfs-root/Onboarding/lib
   ln -sf -t squashfs-root/libs/ \
     /usr/lib/lib{glib,gio,gmodule,gobject}-2.0.so.0 \
     /usr/lib/libgdk_pixbuf-2.0.so.0 \
     /usr/lib/lib{c++,c++abi}.so.1
 
   echo "StartupWMClass=resolve" >> "squashfs-root/share/DaVinciResolve.desktop"
+  echo "StartupWMClass=DaVinci Control Panels Setup" >> "squashfs-root/share/DaVinciControlPanelsSetup.desktop"
 
   echo 'SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTRS{idVendor}=="096e", MODE="0666"' > "squashfs-root/share/etc/udev/rules.d/99-DavinciPanel.rules"
 
   # Fix desktop files
-  sed -i 's#Exec=.*#Exec=davinci-control-panels-setup#' \
-    "squashfs-root/share/DaVinciControlPanelsSetup.desktop"
   sed -i 's#Icon=.*#Icon=davinci-resolve#' \
     "squashfs-root/share/DaVinciResolve.desktop"
   sed -i 's#Icon=.*#Icon=davinci-resolve-panels-setup#' \
@@ -171,10 +191,10 @@ package() {
   install -D -m 0644 "${srcdir}/davinci-resolve.udev.rules" \
     "${pkgdir}/usr/lib/udev/rules.d/70-${pkgname}-hidraw.rules"
 
-  # resolve, DaVinciPanelDaemon and the Fairlight page dlopen the panel APIs from hardcoded /usr/lib64 paths
   install -d -m 0755 "${pkgdir}/usr/lib"
-  ln -s "/opt/${_pkgname}/libs/libDaVinciPanelAPI.so" "${pkgdir}/usr/lib/libDaVinciPanelAPI.so"
-  ln -s "/opt/${_pkgname}/libs/libFairlightPanelAPI.so" "${pkgdir}/usr/lib/libFairlightPanelAPI.so"
+  for _lib in "${_panel_apis[@]}"; do
+    ln -s "/opt/${_pkgname}/libs/${_lib}" "${pkgdir}/usr/lib/${_lib}"
+  done
 
   install -d -m 0755 "${pkgdir}/usr/OFX/Plugins"
   rm -rf "${pkgdir}/usr/OFX/Plugins/DaVinci Resolve Renderer.ofx.bundle"

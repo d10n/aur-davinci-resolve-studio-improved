@@ -1,4 +1,5 @@
 #!/usr/bin/sh
 
-export LD_PRELOAD="libQt6XcbQpa.so.6"
-exec "/opt/resolve/DaVinci Control Panels Setup/DaVinci Control Panels Setup"
+# Start where the desktop entry does (Path=/opt/resolve/)
+cd /opt/resolve || exit
+exec "/opt/resolve/DaVinci Control Panels Setup/DaVinci Control Panels Setup" "$@"

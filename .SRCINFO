@@ -1,7 +1,7 @@
 pkgbase = davinci-resolve-studio
 	pkgdesc = Professional A/V post-production software suite from Blackmagic Design. Studio edition, requires license key or license dongle.
 	pkgver = 21.2
-	pkgrel = 2
+	pkgrel = 3
 	url = https://www.blackmagicdesign.com/support/family/davinci-resolve-and-fusion
 	install = davinci-resolve-studio.install
 	arch = x86_64
@@ -37,7 +37,7 @@ pkgbase = davinci-resolve-studio
 	source = davinci-resolve.tmpfiles.conf
 	source = davinci-resolve.udev.rules
 	sha256sums = 6f90643d81c9db57f248d910ce1ec55247779f3e07123e719bafd84dec6c4a2d
-	sha256sums = f17236fd68cead727c647bc31404e402922cdd491df5526f4b62364cbef9d3b8
+	sha256sums = c8682e990bc1e51454798baecc662166117c5336aef7570b7f96e62a632e9ff0
 	sha256sums = 6adeb6949cb3c2dc80252eed5dbf79510edfb35e431883da325eb04d59ad5ed5
 	sha256sums = b84f893af87118c8d61cd10e66ce438d2d0fa7d620e8c4fcd26f83b7065a49e6
 	sha256sums = 85a848ee5437c46da44a5c0a9395b4d2d845c6562214e85566649b65e80e06cc
