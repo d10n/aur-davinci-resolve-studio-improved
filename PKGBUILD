@@ -6,14 +6,18 @@
 # Hardware support is limited. Nvidia cards should work fine.
 # If you're running a hybrid setup, try with primusrun/optirun.
 
-# Get the source file DaVinci_Resolve_Studio_${pkgver}_Linux.zip from:
+# DaVinci_Resolve_Studio_${pkgver}_Linux.zip is downloaded automatically by
+# blackmagic-download.sh, using Blackmagic's "Download only" option (no
+# registration). To download it by hand instead, get it from
 # https://www.blackmagicdesign.com/support/family/davinci-resolve-and-fusion
-# and save it in the same directory of this PKGBUILD
+# and save it in the same directory as this PKGBUILD.
+# Maintainers: ./update-latest.sh bumps pkgver/_downloadid to the latest release.
 
 _pkgname=resolve
 pkgname=davinci-resolve-studio
 pkgver=21.2
 pkgrel=3
+_downloadid='fff76b4e83b746cbbfaf743a4750261c'
 pkgdesc='Professional A/V post-production software suite from Blackmagic Design. Studio edition, requires license key or license dongle.'
 arch=('x86_64')
 url="https://www.blackmagicdesign.com/support/family/davinci-resolve-and-fusion"
@@ -24,18 +28,24 @@ depends=('glu' 'fuse2' 'opencl-driver' 'qt5-x11extras' 'qt5-svg'
          'tbb' 'apr-util' 'luajit' 'libc++' 'libc++abi')
 makedepends=('libarchive' 'xdg-user-dirs' 'patchelf')
 conflicts=('davinci-resolve' 'davinci-resolve-beta' 'davinci-resolve-studio-beta')
-source=("file://DaVinci_Resolve_Studio_${pkgver}_Linux.zip"
+source=("DaVinci_Resolve_Studio_${pkgver}_Linux.zip::blackmagic://${_downloadid}"
+        "blackmagic-download.sh"
         "davinci-control-panels-setup.sh"
         "davinci-resolve.sysusers.conf"
         "davinci-resolve.tmpfiles.conf"
         "davinci-resolve.udev.rules")
 sha256sums=('6f90643d81c9db57f248d910ce1ec55247779f3e07123e719bafd84dec6c4a2d'
+            'e8c11efae21434a912aa216d5ceb787fcec3074b3fef63ff410ab98175a48b3d'
             'c8682e990bc1e51454798baecc662166117c5336aef7570b7f96e62a632e9ff0'
             '6adeb6949cb3c2dc80252eed5dbf79510edfb35e431883da325eb04d59ad5ed5'
             'b84f893af87118c8d61cd10e66ce438d2d0fa7d620e8c4fcd26f83b7065a49e6'
             '85a848ee5437c46da44a5c0a9395b4d2d845c6562214e85566649b65e80e06cc')
 install="${pkgname}.install"
 options=('!strip')
+# Blackmagic only hands out short-lived signed URLs, so resolve one at download
+# time. makepkg skips this when the zip is already in the build directory.
+# makepkg splits DLAGENTS on spaces, so the build directory path can't have any.
+DLAGENTS+=("blackmagic::/usr/bin/bash ${startdir}/blackmagic-download.sh %u %o")
 
 # Linked into /usr/lib by package(): resolve, DaVinciPanelDaemon and the
 # Fairlight page dlopen the panel APIs from hardcoded /usr/lib64 paths
